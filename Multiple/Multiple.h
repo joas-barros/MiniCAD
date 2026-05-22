@@ -13,6 +13,8 @@
 
 // ------------------------------------------------------------------------------
 
+enum ShapeType { SHAPE_BOX, SHAPE_SPHERE, SHAPE_CYLINDER, SHAPE_GEOSPHERE, SHAPE_GRID, SHAPE_QUAD};
+
 struct Constants
 {
     XMFLOAT4X4 WorldViewProj =
@@ -34,6 +36,9 @@ struct Object
     VertexBuffer<Vertex>* vbuffer = nullptr;
     IndexBuffer<uint>* ibuffer = nullptr;
     ConstantBuffer<Constants>* cbuffer = nullptr;
+
+    ShapeType type;
+    bool selected = false;
 };
 
 // ------------------------------------------------------------------------------
@@ -50,6 +55,18 @@ private:
     bool spinning = true;
     
     vector<Object> scene;
+
+    Box* baseBox = nullptr;
+    Cylinder* baseCylinder = nullptr;
+    Sphere* baseSphere = nullptr;
+    GeoSphere* baseGeoSphere = nullptr;
+    Grid* baseGrid = nullptr;
+    Quad* baseQuad = nullptr;
+
+    uint selectedIndex = -1;
+    Object CreateObject(ShapeType type, float x, float y, float z);
+    void ChangeObjectColor(Object& obj, XMFLOAT4 color);
+    bool HasShape(ShapeType type);
 
 public:
     void Init();

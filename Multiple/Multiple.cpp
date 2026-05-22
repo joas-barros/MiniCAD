@@ -17,6 +17,100 @@ Timer Multiple::timer;
 
 // ------------------------------------------------------------------------------
 
+void Multiple::ChangeObjectColor(Object& obj, XMFLOAT4 color)
+{
+    // Deleta o buffer de vértices antigo
+    if (obj.vbuffer) delete obj.vbuffer;
+
+    // Recria a geometria com a nova cor baseada no tipo do objeto
+    if (obj.type == SHAPE_BOX) {
+        Box shape(1.0f, 1.0f, 1.0f, color);
+        obj.vbuffer = new VertexBuffer<Vertex>(shape);
+    }
+    else if (obj.type == SHAPE_SPHERE) {
+        Sphere shape(1.0f, 20, 20, color);
+        obj.vbuffer = new VertexBuffer<Vertex>(shape);
+    }
+    else if (obj.type == SHAPE_CYLINDER) {
+        Cylinder shape(0.5f, 0.5f, 2.0f, 20, 20, color);
+        obj.vbuffer = new VertexBuffer<Vertex>(shape);
+    }
+    else if (obj.type == SHAPE_GEOSPHERE) {
+        GeoSphere shape(1.0f, 2, color);
+        obj.vbuffer = new VertexBuffer<Vertex>(shape);
+    }
+}
+
+// ------------------------------------------------------------------------------
+
+Object Multiple::CreateObject(ShapeType type, float x, float y, float z)
+{
+    Object obj;
+    obj.type = type;
+    obj.selected = false;
+
+    // Define a posição inicial do objeto
+    XMStoreFloat4x4(&obj.world, XMMatrixTranslation(x, y, z));
+
+    // Todo objeto precisa do seu próprio buffer de constantes para matrizes
+    obj.cbuffer = new ConstantBuffer<Constants>();
+
+    // Aloca buffers de vértice e índice independentes baseados no modelo base
+    switch (type)
+    {
+    case SHAPE_BOX:
+        obj.mesh = new Mesh(*baseBox);
+        obj.vbuffer = new VertexBuffer<Vertex>(*baseBox);
+        obj.ibuffer = new IndexBuffer<uint>(*baseBox);
+        break;
+    case SHAPE_CYLINDER:
+        obj.mesh = new Mesh(*baseCylinder);
+        obj.vbuffer = new VertexBuffer<Vertex>(*baseCylinder);
+        obj.ibuffer = new IndexBuffer<uint>(*baseCylinder);
+        break;
+    case SHAPE_SPHERE:
+        obj.mesh = new Mesh(*baseSphere);
+        obj.vbuffer = new VertexBuffer<Vertex>(*baseSphere);
+        obj.ibuffer = new IndexBuffer<uint>(*baseSphere);
+        break;
+    case SHAPE_GEOSPHERE:
+        obj.mesh = new Mesh(*baseGeoSphere);
+        obj.vbuffer = new VertexBuffer<Vertex>(*baseGeoSphere);
+        obj.ibuffer = new IndexBuffer<uint>(*baseGeoSphere);
+        break;
+    case SHAPE_GRID:
+        obj.mesh = new Mesh(*baseGrid);
+        obj.vbuffer = new VertexBuffer<Vertex>(*baseGrid);
+        obj.ibuffer = new IndexBuffer<uint>(*baseGrid);
+        break;
+    case SHAPE_QUAD:
+        obj.mesh = new Mesh(*baseQuad);
+        obj.vbuffer = new VertexBuffer<Vertex>(*baseQuad);
+        obj.ibuffer = new IndexBuffer<uint>(*baseQuad);
+        break;
+    }
+
+    return obj;
+}
+
+// ------------------------------------------------------------------------------
+
+bool Multiple::HasShape(ShapeType type)
+{
+    // Percorre todos os objetos na cena
+    for (size_t i = 0; i < scene.size(); i++)
+    {
+        // Se encontrar um objeto do mesmo tipo, retorna verdadeiro
+        if (scene[i].type == type)
+        {
+            return true;
+        }
+    }
+    return false; // Se terminar o laço e não achar, retorna falso
+}
+
+// ------------------------------------------------------------------------------
+
 void Multiple::Init()
 {
     // --------------------------------------
@@ -36,69 +130,24 @@ void Multiple::Init()
     // Criação das Geometrias: Vértices e Índices
     // -------------------------------------------
 
-    /*Box box(2.0f, 2.0f, 2.0f, Orange);
-    Cylinder cylinder(1.0f, 0.5f, 3.0f, 20, 20, Yellow);*/
-    Sphere sphere(1.0f, 20, 20, Crimson);
-    Grid grid(3.0f, 3.0f, 20, 20, Gray);
-	GeoSphere geoSphere(0.3f, 2, Green);
+    baseBox = new Box(1.0f, 1.0f, 1.0f, White);
+    baseCylinder = new Cylinder(0.5f, 0.5f, 2.0f, 20, 20, White);
+    baseSphere = new Sphere(1.0f, 20, 20, White);
+    baseGeoSphere = new GeoSphere(1.0f, 2, White);
+    baseGrid = new Grid(3.0f, 3.0f, 20, 20, White);
+    baseQuad = new Quad(2.0f, 2.0f, White);
 
-    // -------------------------
-    // Definição dos Objetos 3D
-    // -------------------------
+    // Cena inicial com 3 objetos
+    scene.push_back(CreateObject(SHAPE_BOX, -2.5f, 0.5f, 0.0f));
+    scene.push_back(CreateObject(SHAPE_SPHERE, 0.0f, 0.5f, 0.0f));
+    scene.push_back(CreateObject(SHAPE_CYLINDER, 2.5f, 0.5f, 0.0f));
 
-    // box
-    /*Object boxObj;
-    XMStoreFloat4x4(&boxObj.world,
-        XMMatrixScaling(0.4f, 0.4f, 0.4f) *
-        XMMatrixTranslation(-1.0f, 0.41f, 1.0f));
-    boxObj.mesh = new Mesh(box);
-    boxObj.vbuffer = new VertexBuffer<Vertex>(box);
-    boxObj.ibuffer = new IndexBuffer<uint>(box);
-    boxObj.cbuffer = new ConstantBuffer<Constants>();
-    scene.push_back(boxObj);*/
-
-    // cylinder
-    /*Object cylinderObj;
-    XMStoreFloat4x4(&cylinderObj.world,
-        XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-        XMMatrixTranslation(1.0f, 0.75f, -1.0f));
-    cylinderObj.mesh = new Mesh(cylinder);
-    cylinderObj.vbuffer = new VertexBuffer<Vertex>(cylinder);
-    cylinderObj.ibuffer = new IndexBuffer<uint>(cylinder);
-    cylinderObj.cbuffer = new ConstantBuffer<Constants>();
-    scene.push_back(cylinderObj);*/
-
-    // sphere
-    Object sphereObj;
-    XMStoreFloat4x4(&sphereObj.world,
-        XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-        XMMatrixTranslation(0.0f, 0.5f, 0.0f));
-    sphereObj.mesh = new Mesh(sphere);
-    sphereObj.vbuffer = new VertexBuffer<Vertex>(sphere);
-    sphereObj.ibuffer = new IndexBuffer<uint>(sphere);
-    sphereObj.cbuffer = new ConstantBuffer<Constants>();
-    scene.push_back(sphereObj);
-
-    // grid
-    Object gridObj;
-    gridObj.mesh = new Mesh(grid);
-    XMStoreFloat4x4(&gridObj.world,
-        XMMatrixIdentity());
-    gridObj.vbuffer = new VertexBuffer<Vertex>(grid);
-    gridObj.ibuffer = new IndexBuffer<uint>(grid);
-    gridObj.cbuffer = new ConstantBuffer<Constants>();
-    scene.push_back(gridObj);
-
-	// geosphere
-	Object geoSphereObj;
-	geoSphereObj.mesh = new Mesh(geoSphere);
-	XMStoreFloat4x4(&geoSphereObj.world,
-		XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-		XMMatrixTranslation(0.0f, 0.6f, 1.0f));
-	geoSphereObj.vbuffer = new VertexBuffer<Vertex>(geoSphere);
-	geoSphereObj.ibuffer = new IndexBuffer<uint>(geoSphere);
-	geoSphereObj.cbuffer = new ConstantBuffer<Constants>();
-	scene.push_back(geoSphereObj);
+    if (!scene.empty())
+    {
+        selectedIndex = 0;
+        scene[selectedIndex].selected = true;
+        ChangeObjectColor(scene[selectedIndex], Crimson);
+    }
  
     // ---------------------
 
@@ -118,54 +167,102 @@ void Multiple::Update()
     if (input->KeyPress(VK_ESCAPE))
         window->Close();
 
-    // ativa ou desativa o giro do objeto
-    if (input->KeyPress('S'))
+    // ---------------------------------------------------------
+    // LÓGICA DE SELEÇÃO (TAB)
+    // ---------------------------------------------------------
+    if (input->KeyPress(VK_TAB))
     {
-        spinning = !spinning;
+        if (!scene.empty())
+        {
+            // Volta a cor do atual para BRANCO
+            if (selectedIndex >= 0 && selectedIndex < scene.size())
+            {
+                scene[selectedIndex].selected = false;
+                ChangeObjectColor(scene[selectedIndex], XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+            }
 
-        if (spinning)
-            timer.Start();
-        else
-            timer.Stop();
+            // Avança o índice para o próximo objeto da lista
+            selectedIndex = (selectedIndex + 1) % scene.size();
+
+            // Pinta o novo objeto selecionado de VERMELHO
+            scene[selectedIndex].selected = true;
+            ChangeObjectColor(scene[selectedIndex], XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f));
+        }
     }
 
-    // atualiza posição da câmera
+    // ---------------------------------------------------------
+    // ATUALIZAÇÃO DA CÂMERA
+    // ---------------------------------------------------------
     camera.Update();
 
-    // constrói a matriz de visualização
     XMVECTOR pos = XMVectorSet(camera.x, camera.y, camera.z, 1.0f);
     XMVECTOR target = XMVectorZero();
     XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
 
-    // carrega matriz de projeção
     XMMATRIX proj = XMLoadFloat4x4(&Proj);
 
-    // modifica matriz de mundo da esfera
-    XMStoreFloat4x4(&scene[0].world,
-        XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-        XMMatrixRotationY(float(timer.Elapsed())) *
-        XMMatrixTranslation(0.0f, 1.0f, 0.0f));
+    // ---------------------------------------------------------
+    // INSERÇÃO DE OBJETOS COM POSIÇÕES FIXAS
+    // ---------------------------------------------------------
 
-	// modifica matriz de mundo da geosfera
-	XMStoreFloat4x4(&scene[2].world,
-        XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-        XMMatrixTranslation(0.0f, 0.6f, 1.0f) *
-        XMMatrixRotationAxis(XMVectorSet(0.0f, 1.0f, 0.0f, 1), float(timer.Elapsed())));
+    // Se a tecla foi pressionada E a função HasShape retornar falso (o objeto não existe), adiciona na cena
+    if (input->KeyPress('B') && !HasShape(SHAPE_BOX))
+        scene.push_back(CreateObject(SHAPE_BOX, -2.5f, 0.5f, 0.0f));
 
-    // ajusta o constant buffer de cada objeto
-    for (auto & obj : scene)
+    if (input->KeyPress('C') && !HasShape(SHAPE_CYLINDER))
+        scene.push_back(CreateObject(SHAPE_CYLINDER, 2.5f, 0.5f, 0.0f));
+
+    if (input->KeyPress('S') && !HasShape(SHAPE_SPHERE))
+        scene.push_back(CreateObject(SHAPE_SPHERE, 0.0f, 0.5f, 0.0f));
+
+    if (input->KeyPress('G') && !HasShape(SHAPE_GEOSPHERE))
+        scene.push_back(CreateObject(SHAPE_GEOSPHERE, -2.5f, 0.5f, 2.5f));
+
+    if (input->KeyPress('P') && !HasShape(SHAPE_GRID))
+        scene.push_back(CreateObject(SHAPE_GRID, 0.0f, 0.0f, 2.5f));
+
+    if (input->KeyPress('Q') && !HasShape(SHAPE_QUAD))
+        scene.push_back(CreateObject(SHAPE_QUAD, 2.5f, 0.5f, 2.5f));
+
+    // ---------------------------------------------------------
+    // REMOÇÃO DO OBJETO SELECIONADO (Tecla DEL)
+    // ---------------------------------------------------------
+    if (input->KeyPress(VK_DELETE))
     {
-        // carrega matriz de mundo
-        XMMATRIX world = XMLoadFloat4x4(&obj.world);      
+        if (selectedIndex >= 0 && selectedIndex < scene.size())
+        {
+            // Remove o objeto do vetor
+            scene.erase(scene.begin() + selectedIndex);
 
-        // constrói matriz combinada
-        XMMATRIX WorldViewProj = world * view * proj;        
+            // Reajusta a seleção para o próximo elemento válido (se a cena não ficou vazia)
+            if (!scene.empty())
+            {
+                // Garante que o índice não passe do tamanho atual do vetor
+                selectedIndex = selectedIndex % scene.size();
 
-        // atualiza o buffer constante com a matriz combinada
+                // Pinta o novo item selecionado de vermelho
+                scene[selectedIndex].selected = true;
+                ChangeObjectColor(scene[selectedIndex], XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f));
+            }
+            else
+            {
+                selectedIndex = -1; // Cena ficou completamente vazia
+            }
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ATUALIZAÇÃO DOS BUFFERS CONSTANTES
+    // ---------------------------------------------------------
+    for (size_t i = 0; i < scene.size(); i++)
+    {
+        XMMATRIX world = XMLoadFloat4x4(&scene[i].world);
+        XMMATRIX WorldViewProj = world * view * proj;
+
         Constants constants;
         XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
-        obj.cbuffer->Copy(&constants);
+        scene[i].cbuffer->Copy(&constants);
     }
 }
 
@@ -219,6 +316,13 @@ void Multiple::Finalize()
         delete obj.ibuffer;
         delete obj.cbuffer;
     }
+
+    delete baseBox;
+    delete baseCylinder;
+    delete baseSphere;
+    delete baseGeoSphere;
+    delete baseGrid;
+    delete baseQuad;
 }
 
 // ------------------------------------------------------------------------------
