@@ -157,7 +157,26 @@ void Multiple::Init()
     CreateObject(SHAPE_BOX, -1.5f, 0.5f, 0.0f);
     CreateObject(SHAPE_SPHERE, 0.0f, 0.5f, 0.0f);
     CreateObject(SHAPE_CYLINDER, 1.5f, 0.5f, 0.0f);
+
+    // -------------------------------------------
+    // Vértices das Linhas Divisórias
+    // -------------------------------------------
  
+    Vertex lineVerts[4] = {
+        { XMFLOAT3(0.0f,  1.0f, 0.0f), White }, // Topo
+        { XMFLOAT3(0.0f, -1.0f, 0.0f), White }, // Base
+
+        { XMFLOAT3(-1.0f, 0.0f, 0.0f), White }, // Esquerda
+        { XMFLOAT3(1.0f, 0.0f, 0.0f), White }  // Direita
+    };
+
+    linesVBuffer = new VertexBuffer<Vertex>(lineVerts, 4);
+    linesCBuffer = new ConstantBuffer<Constants>();
+
+    Constants lineConstants;
+    XMStoreFloat4x4(&lineConstants.WorldViewProj, XMMatrixIdentity());
+    linesCBuffer->Copy(&lineConstants);
+
     // ---------------------
 
     BuildRootSignature();
@@ -397,6 +416,18 @@ void Multiple::Draw()
                 graphics->CommandList()->DrawIndexedInstanced(obj.mesh->indexCount, 1, obj.mesh->startIndex, obj.mesh->baseVertex, 0);
             }
         }
+
+        // DESENHO DAS LINHAS DIVISORIAS
+        D3D12_VIEWPORT viewFull = { 0.0f, 0.0f, w, h, 0.0f, 1.0f };
+        graphics->CommandList()->RSSetViewports(1, &viewFull);
+
+        graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+        graphics->CommandList()->SetGraphicsRootConstantBufferView(0, linesCBuffer->View());
+        graphics->CommandList()->IASetVertexBuffers(0, 1, linesVBuffer->View());
+        graphics->CommandList()->DrawInstanced(4, 1, 0, 0);
+
+        //Devolve a configuração original para o próximo Frame não quebrar
+        graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }
     else
     {
@@ -441,6 +472,9 @@ void Multiple::Finalize()
     delete baseGeoSphere;
     delete baseGrid;
     delete baseQuad;
+
+    delete linesVBuffer;
+    delete linesCBuffer;
 }
 
 // ------------------------------------------------------------------------------

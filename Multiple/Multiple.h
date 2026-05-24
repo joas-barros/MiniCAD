@@ -67,11 +67,13 @@ private:
     Grid* baseGrid = nullptr;
     Quad* baseQuad = nullptr;
 
+	// Metodos de criação e manipulação de objetos
     uint selectedIndex = -1;
     void CreateObject(ShapeType type, float x, float y, float z);
     void ChangeObjectColor(Object& obj, XMFLOAT4 color);
 	void SelectObject(uint index);
 
+	// Metodos de ataulização de cena
     void HandleSelectionAndDeletion();
     void HandleInsertion();
     void HandleTransformations();
@@ -79,6 +81,10 @@ private:
 
     bool showFourViews = false;
     void HandleViewToggle();
+
+    // linas divisorias
+    VertexBuffer<Vertex>* linesVBuffer = nullptr;
+    ConstantBuffer<Constants>* linesCBuffer = nullptr;
 
 public:
     void Init();
