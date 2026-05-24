@@ -10,6 +10,7 @@
 **********************************************************************************/
 
 #include "Multiple.h"
+#include "ShapeConstants.h"
 
 // ------------------------------------------------------------------------------
 
@@ -24,19 +25,27 @@ void Multiple::ChangeObjectColor(Object& obj, XMFLOAT4 color)
 
     // Recria a geometria com a nova cor baseada no tipo do objeto
     if (obj.type == SHAPE_BOX) {
-        Box shape(1.0f, 1.0f, 1.0f, color);
+        Box shape(BOX_SIZE, BOX_SIZE, BOX_SIZE, color);
         obj.vbuffer = new VertexBuffer<Vertex>(shape);
     }
     else if (obj.type == SHAPE_SPHERE) {
-        Sphere shape(1.0f, 20, 20, color);
+        Sphere shape(SPHERE_RADIUS, SPHERE_SLICES, SPHERE_STACKS, color);
         obj.vbuffer = new VertexBuffer<Vertex>(shape);
     }
     else if (obj.type == SHAPE_CYLINDER) {
-        Cylinder shape(0.5f, 0.5f, 2.0f, 20, 20, color);
+        Cylinder shape(CYL_BOTTOM_RADIUS, CYL_TOP_RADIUS, CYL_HEIGHT, CYL_SLICES, CYL_STACKS, color);
         obj.vbuffer = new VertexBuffer<Vertex>(shape);
     }
     else if (obj.type == SHAPE_GEOSPHERE) {
-        GeoSphere shape(1.0f, 2, color);
+        GeoSphere shape(GEOSPHERE_RADIUS, GEOSPHERE_SUBDIVISIONS, color);
+        obj.vbuffer = new VertexBuffer<Vertex>(shape);
+    }
+    else if (obj.type == SHAPE_GRID) {
+        Grid shape(PLANE_WIDTH, PLANE_DEPTH, GRID_M, GRID_N, color);
+        obj.vbuffer = new VertexBuffer<Vertex>(shape);
+    }
+    else if (obj.type == SHAPE_QUAD) {
+        Quad shape(QUAD_SIZE, QUAD_SIZE, color);
         obj.vbuffer = new VertexBuffer<Vertex>(shape);
     }
 }
@@ -95,22 +104,6 @@ Object Multiple::CreateObject(ShapeType type, float x, float y, float z)
 
 // ------------------------------------------------------------------------------
 
-bool Multiple::HasShape(ShapeType type)
-{
-    // Percorre todos os objetos na cena
-    for (size_t i = 0; i < scene.size(); i++)
-    {
-        // Se encontrar um objeto do mesmo tipo, retorna verdadeiro
-        if (scene[i].type == type)
-        {
-            return true;
-        }
-    }
-    return false; // Se terminar o laço e não achar, retorna falso
-}
-
-// ------------------------------------------------------------------------------
-
 void Multiple::Init()
 {
     // --------------------------------------
@@ -130,12 +123,12 @@ void Multiple::Init()
     // Criação das Geometrias: Vértices e Índices
     // -------------------------------------------
 
-    baseBox = new Box(1.0f, 1.0f, 1.0f, White);
-    baseCylinder = new Cylinder(0.5f, 0.5f, 2.0f, 20, 20, White);
-    baseSphere = new Sphere(1.0f, 20, 20, White);
-    baseGeoSphere = new GeoSphere(1.0f, 2, White);
-    baseGrid = new Grid(3.0f, 3.0f, 20, 20, White);
-    baseQuad = new Quad(2.0f, 2.0f, White);
+    baseBox = new Box(BOX_SIZE, BOX_SIZE, BOX_SIZE, White);
+    baseCylinder = new Cylinder(CYL_BOTTOM_RADIUS, CYL_TOP_RADIUS, CYL_HEIGHT, CYL_SLICES, CYL_STACKS, White);
+    baseSphere = new Sphere(SPHERE_RADIUS, SPHERE_SLICES, SPHERE_STACKS, White);
+    baseGeoSphere = new GeoSphere(GEOSPHERE_RADIUS, GEOSPHERE_SUBDIVISIONS, White);
+    baseGrid = new Grid(PLANE_WIDTH, PLANE_DEPTH, GRID_M, GRID_N, White);
+    baseQuad = new Quad(QUAD_SIZE, QUAD_SIZE, White);
 
     // Cena inicial com 3 objetos
     scene.push_back(CreateObject(SHAPE_BOX, -2.5f, 0.5f, 0.0f));
@@ -206,24 +199,16 @@ void Multiple::Update()
     // INSERÇÃO DE OBJETOS COM POSIÇÕES FIXAS
     // ---------------------------------------------------------
 
-    // Se a tecla foi pressionada E a função HasShape retornar falso (o objeto não existe), adiciona na cena
-    if (input->KeyPress('B') && !HasShape(SHAPE_BOX))
-        scene.push_back(CreateObject(SHAPE_BOX, -2.5f, 0.5f, 0.0f));
+    // Espaçamento dinâmico para os novos objetos não nascerem um dentro do outro
+    float spawnX = -4.0f + (scene.size() % 5) * 2.0f;
+    float spawnZ = 2.0f + (scene.size() / 5) * 2.0f;
 
-    if (input->KeyPress('C') && !HasShape(SHAPE_CYLINDER))
-        scene.push_back(CreateObject(SHAPE_CYLINDER, 2.5f, 0.5f, 0.0f));
-
-    if (input->KeyPress('S') && !HasShape(SHAPE_SPHERE))
-        scene.push_back(CreateObject(SHAPE_SPHERE, 0.0f, 0.5f, 0.0f));
-
-    if (input->KeyPress('G') && !HasShape(SHAPE_GEOSPHERE))
-        scene.push_back(CreateObject(SHAPE_GEOSPHERE, -2.5f, 0.5f, 2.5f));
-
-    if (input->KeyPress('P') && !HasShape(SHAPE_GRID))
-        scene.push_back(CreateObject(SHAPE_GRID, 0.0f, 0.0f, 2.5f));
-
-    if (input->KeyPress('Q') && !HasShape(SHAPE_QUAD))
-        scene.push_back(CreateObject(SHAPE_QUAD, 2.5f, 0.5f, 2.5f));
+    if (input->KeyPress('B')) scene.push_back(CreateObject(SHAPE_BOX, spawnX, 0.5f, spawnZ));
+    if (input->KeyPress('C')) scene.push_back(CreateObject(SHAPE_CYLINDER, spawnX, 0.5f, spawnZ));
+    if (input->KeyPress('S')) scene.push_back(CreateObject(SHAPE_SPHERE, spawnX, 0.5f, spawnZ));
+    if (input->KeyPress('G')) scene.push_back(CreateObject(SHAPE_GEOSPHERE, spawnX, 0.5f, spawnZ));
+    if (input->KeyPress('I')) scene.push_back(CreateObject(SHAPE_GRID, spawnX, 0.5f, spawnZ));
+    if (input->KeyPress('Q')) scene.push_back(CreateObject(SHAPE_QUAD, spawnX, 0.5f, spawnZ));
 
     // ---------------------------------------------------------
     // REMOÇÃO DO OBJETO SELECIONADO (Tecla DEL)
@@ -243,7 +228,7 @@ void Multiple::Update()
 
                 // Pinta o novo item selecionado de vermelho
                 scene[selectedIndex].selected = true;
-                ChangeObjectColor(scene[selectedIndex], XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f));
+                ChangeObjectColor(scene[selectedIndex], Crimson);
             }
             else
             {

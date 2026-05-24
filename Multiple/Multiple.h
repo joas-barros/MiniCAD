@@ -66,7 +66,6 @@ private:
     uint selectedIndex = -1;
     Object CreateObject(ShapeType type, float x, float y, float z);
     void ChangeObjectColor(Object& obj, XMFLOAT4 color);
-    bool HasShape(ShapeType type);
 
 public:
     void Init();

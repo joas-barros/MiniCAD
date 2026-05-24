@@ -245,6 +245,7 @@
     <ClInclude Include="Multiple.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="Resources.h" />
+    <ClInclude Include="ShapeConstants.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="VBuffer.h" />

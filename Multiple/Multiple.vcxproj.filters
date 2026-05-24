@@ -122,6 +122,9 @@
     <ClInclude Include="Colors.h">
       <Filter>DXUT\Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ShapeConstants.h">
+      <Filter>App\Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Pixel.hlsl">
