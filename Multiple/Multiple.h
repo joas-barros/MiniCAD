@@ -40,6 +40,7 @@ struct Object
     ShapeType type;
     bool selected = false;
     float scale = 1.0f;
+    XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
 };
 
 // ------------------------------------------------------------------------------

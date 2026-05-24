@@ -79,6 +79,7 @@ void Multiple::CreateObject(ShapeType type, float x, float y, float z)
 
     // Define a posição inicial do objeto
     XMStoreFloat4x4(&obj.world, XMMatrixTranslation(x, y, z));
+	obj.position = { x, y, z };
 
     // Todo objeto precisa do seu próprio buffer de constantes para matrizes
     obj.cbuffer = new ConstantBuffer<Constants>();
@@ -239,21 +240,35 @@ void Multiple::Update()
         }
     }
 
-    // ---------------------------------------------------------
-    // LÓGICA DE ESCALA COM SCROLL
-    // ---------------------------------------------------------
-    if (selectedIndex != -1 && input->KeyDown(VK_CONTROL))
+    if (selectedIndex != -1)
     {
-        float wheelDelta = input->MouseWheel();
-        if (wheelDelta != 0.0f && selectedIndex != -1)
+        // ---------------------------------------------------------
+        // LÓGICA DE ESCALA COM SCROLL
+        // ---------------------------------------------------------
+        if (input->KeyDown(VK_CONTROL))
         {
-            float speed = 0.0005f; // Sensibilidade do zoom
-            scene[selectedIndex].scale += wheelDelta * speed;
+            float wheelDelta = input->MouseWheel();
+            if (wheelDelta != 0.0f && selectedIndex != -1)
+            {
+                float speed = 0.0005f; // Sensibilidade do zoom
+                scene[selectedIndex].scale += wheelDelta * speed;
 
-            // Limites (Min e Max) para não sumir nem ficar infinito
-            if (scene[selectedIndex].scale < 0.1f) scene[selectedIndex].scale = 0.1f;
-            if (scene[selectedIndex].scale > 4.0f) scene[selectedIndex].scale = 4.0f;
+                // Limites (Min e Max) para não sumir nem ficar infinito
+                if (scene[selectedIndex].scale < 0.1f) scene[selectedIndex].scale = 0.1f;
+                if (scene[selectedIndex].scale > 4.0f) scene[selectedIndex].scale = 4.0f;
+            }
         }
+
+        // ---------------------------------------------------------
+        // LÓGICA DA TRANSLACAO
+        // ---------------------------------------------------------
+		float moveSpeed = 0.05f; // Velocidade de movimento
+        if (input->KeyDown(VK_LEFT))  scene[selectedIndex].position.x += moveSpeed;
+        if (input->KeyDown(VK_RIGHT)) scene[selectedIndex].position.x -= moveSpeed;
+        if (input->KeyDown(VK_UP))    scene[selectedIndex].position.z -= moveSpeed;
+        if (input->KeyDown(VK_DOWN))  scene[selectedIndex].position.z += moveSpeed;
+		if (input->KeyDown(VK_PRIOR))      scene[selectedIndex].position.y += moveSpeed;
+		if (input->KeyDown(VK_NEXT))      scene[selectedIndex].position.y -= moveSpeed;
     }
 
     // ---------------------------------------------------------
@@ -274,16 +289,12 @@ void Multiple::Update()
     // ---------------------------------------------------------
     for (auto& obj : scene)
     {
-        XMMATRIX worldBase = XMLoadFloat4x4(&obj.world);
-
-        XMVECTOR scaleVec, rotQuat, transVec;
-        XMMatrixDecompose(&scaleVec, &rotQuat, &transVec, worldBase);
 
         XMMATRIX S = XMMatrixScaling(obj.scale, obj.scale, obj.scale);
 
         XMMATRIX R = XMMatrixIdentity();
 
-        XMMATRIX T = XMMatrixTranslationFromVector(transVec);
+        XMMATRIX T = XMMatrixTranslation(obj.position.x, obj.position.y, obj.position.z);
 
         XMMATRIX W = S * R * T;
 
