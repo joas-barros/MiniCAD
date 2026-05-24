@@ -18,6 +18,25 @@ Timer Multiple::timer;
 
 // ------------------------------------------------------------------------------
 
+void Multiple::SelectObject(uint index)
+{
+    // Limpa a seleção anterior
+    if (selectedIndex >= 0 && selectedIndex < (int)scene.size()) {
+        scene[selectedIndex].selected = false;
+        ChangeObjectColor(scene[selectedIndex], White);
+    }
+
+    selectedIndex = index;
+
+    // Aplica a nova seleção
+    if (selectedIndex >= 0 && selectedIndex < (int)scene.size()) {
+        scene[selectedIndex].selected = true;
+        ChangeObjectColor(scene[selectedIndex], Crimson);
+    }
+}
+
+// ------------------------------------------------------------------------------
+
 void Multiple::ChangeObjectColor(Object& obj, XMFLOAT4 color)
 {
     // Deleta o buffer de vértices antigo
@@ -52,7 +71,7 @@ void Multiple::ChangeObjectColor(Object& obj, XMFLOAT4 color)
 
 // ------------------------------------------------------------------------------
 
-Object Multiple::CreateObject(ShapeType type, float x, float y, float z)
+void Multiple::CreateObject(ShapeType type, float x, float y, float z)
 {
     Object obj;
     obj.type = type;
@@ -99,7 +118,9 @@ Object Multiple::CreateObject(ShapeType type, float x, float y, float z)
         break;
     }
 
-    return obj;
+    scene.push_back(obj);
+
+    if (scene.size() == 1) SelectObject(0);
 }
 
 // ------------------------------------------------------------------------------
@@ -131,16 +152,9 @@ void Multiple::Init()
     baseQuad = new Quad(QUAD_SIZE, QUAD_SIZE, White);
 
     // Cena inicial com 3 objetos
-    scene.push_back(CreateObject(SHAPE_BOX, -2.5f, 0.5f, 0.0f));
-    scene.push_back(CreateObject(SHAPE_SPHERE, 0.0f, 0.5f, 0.0f));
-    scene.push_back(CreateObject(SHAPE_CYLINDER, 2.5f, 0.5f, 0.0f));
-
-    if (!scene.empty())
-    {
-        selectedIndex = 0;
-        scene[selectedIndex].selected = true;
-        ChangeObjectColor(scene[selectedIndex], Crimson);
-    }
+    CreateObject(SHAPE_BOX, -2.5f, 0.5f, 0.0f);
+    CreateObject(SHAPE_SPHERE, 0.0f, 0.5f, 0.0f);
+    CreateObject(SHAPE_CYLINDER, 2.5f, 0.5f, 0.0f);
  
     // ---------------------
 
@@ -171,7 +185,7 @@ void Multiple::Update()
             if (selectedIndex >= 0 && selectedIndex < scene.size())
             {
                 scene[selectedIndex].selected = false;
-                ChangeObjectColor(scene[selectedIndex], XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+                ChangeObjectColor(scene[selectedIndex], White);
             }
 
             // Avança o índice para o próximo objeto da lista
@@ -179,7 +193,7 @@ void Multiple::Update()
 
             // Pinta o novo objeto selecionado de VERMELHO
             scene[selectedIndex].selected = true;
-            ChangeObjectColor(scene[selectedIndex], XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f));
+            ChangeObjectColor(scene[selectedIndex], Crimson);
         }
     }
 
@@ -196,19 +210,19 @@ void Multiple::Update()
     XMMATRIX proj = XMLoadFloat4x4(&Proj);
 
     // ---------------------------------------------------------
-    // INSERÇÃO DE OBJETOS COM POSIÇÕES FIXAS
+    // INSERÇÃO DE OBJETOS
     // ---------------------------------------------------------
 
     // Espaçamento dinâmico para os novos objetos não nascerem um dentro do outro
     float spawnX = -4.0f + (scene.size() % 5) * 2.0f;
     float spawnZ = 2.0f + (scene.size() / 5) * 2.0f;
 
-    if (input->KeyPress('B')) scene.push_back(CreateObject(SHAPE_BOX, spawnX, 0.5f, spawnZ));
-    if (input->KeyPress('C')) scene.push_back(CreateObject(SHAPE_CYLINDER, spawnX, 0.5f, spawnZ));
-    if (input->KeyPress('S')) scene.push_back(CreateObject(SHAPE_SPHERE, spawnX, 0.5f, spawnZ));
-    if (input->KeyPress('G')) scene.push_back(CreateObject(SHAPE_GEOSPHERE, spawnX, 0.5f, spawnZ));
-    if (input->KeyPress('I')) scene.push_back(CreateObject(SHAPE_GRID, spawnX, 0.5f, spawnZ));
-    if (input->KeyPress('Q')) scene.push_back(CreateObject(SHAPE_QUAD, spawnX, 0.5f, spawnZ));
+    if (input->KeyPress('B')) CreateObject(SHAPE_BOX, spawnX, 0.5f, spawnZ);
+    if (input->KeyPress('C')) CreateObject(SHAPE_CYLINDER, spawnX, 0.5f, spawnZ);
+    if (input->KeyPress('S')) CreateObject(SHAPE_SPHERE, spawnX, 0.5f, spawnZ);
+    if (input->KeyPress('G')) CreateObject(SHAPE_GEOSPHERE, spawnX, 0.5f, spawnZ);
+    if (input->KeyPress('I')) CreateObject(SHAPE_GRID, spawnX, 0.5f, spawnZ);
+    if (input->KeyPress('Q')) CreateObject(SHAPE_QUAD, spawnX, 0.5f, spawnZ);
 
     // ---------------------------------------------------------
     // REMOÇÃO DO OBJETO SELECIONADO (Tecla DEL)

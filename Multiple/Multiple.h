@@ -64,8 +64,9 @@ private:
     Quad* baseQuad = nullptr;
 
     uint selectedIndex = -1;
-    Object CreateObject(ShapeType type, float x, float y, float z);
+    void CreateObject(ShapeType type, float x, float y, float z);
     void ChangeObjectColor(Object& obj, XMFLOAT4 color);
+	void SelectObject(uint index);
 
 public:
     void Init();
