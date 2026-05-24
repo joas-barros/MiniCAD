@@ -80,6 +80,7 @@ void Multiple::CreateObject(ShapeType type, float x, float y, float z)
     // Define a posição inicial do objeto
     XMStoreFloat4x4(&obj.world, XMMatrixTranslation(x, y, z));
 	obj.position = { x, y, z };
+    obj.rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
     // Todo objeto precisa do seu próprio buffer de constantes para matrizes
     obj.cbuffer = new ConstantBuffer<Constants>();
@@ -133,7 +134,7 @@ void Multiple::Init()
     // --------------------------------------
 
     // posição inicial da câmera
-    camera = { XM_PIDIV2, XM_PIDIV4, 5.0f };
+    camera = { XM_PIDIV2, XM_PIDIV4, 12.0f };
 
     // inicializa a matriz de projeção
     XMStoreFloat4x4(&Proj, XMMatrixPerspectiveFovLH(
@@ -153,9 +154,9 @@ void Multiple::Init()
     baseQuad = new Quad(QUAD_SIZE, QUAD_SIZE, White);
 
     // Cena inicial com 3 objetos
-    CreateObject(SHAPE_BOX, -2.5f, 0.5f, 0.0f);
+    CreateObject(SHAPE_BOX, -1.5f, 0.5f, 0.0f);
     CreateObject(SHAPE_SPHERE, 0.0f, 0.5f, 0.0f);
-    CreateObject(SHAPE_CYLINDER, 2.5f, 0.5f, 0.0f);
+    CreateObject(SHAPE_CYLINDER, 1.5f, 0.5f, 0.0f);
  
     // ---------------------
 
@@ -175,36 +176,72 @@ void Multiple::Update()
     if (input->KeyPress(VK_ESCAPE))
         window->Close();
 
-    // ---------------------------------------------------------
+    // Processamento de Inputs do Usuário
+    HandleSelectionAndDeletion();
+    HandleInsertion();
+    HandleTransformations();
+
+    // Atualização da Câmera
+    camera.Update();
+
+    XMVECTOR pos = XMVectorSet(camera.x, camera.y, camera.z, 1.0f);
+    XMVECTOR target = XMVectorZero();
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
+    XMMATRIX proj = XMLoadFloat4x4(&Proj);
+
+    // Envio dos dados para a GPU
+    UpdateSceneBuffers(view, proj);
+}
+
+void Multiple::HandleSelectionAndDeletion()
+{
     // LÓGICA DE SELEÇÃO (TAB)
-    // ---------------------------------------------------------
     if (input->KeyPress(VK_TAB))
     {
         if (!scene.empty())
         {
-            // Volta a cor do atual para BRANCO
             if (selectedIndex >= 0 && selectedIndex < scene.size())
             {
                 scene[selectedIndex].selected = false;
                 ChangeObjectColor(scene[selectedIndex], White);
             }
 
-            // Avança o índice para o próximo objeto da lista
             selectedIndex = (selectedIndex + 1) % scene.size();
 
-            // Pinta o novo objeto selecionado de VERMELHO
             scene[selectedIndex].selected = true;
             ChangeObjectColor(scene[selectedIndex], Crimson);
         }
     }
 
-    // ---------------------------------------------------------
-    // INSERÇÃO DE OBJETOS
-    // ---------------------------------------------------------
+    // REMOÇÃO DO OBJETO SELECIONADO (Tecla DEL)
+    if (input->KeyPress(VK_DELETE))
+    {
+        if (selectedIndex >= 0 && selectedIndex < scene.size())
+        {
+            scene.erase(scene.begin() + selectedIndex);
 
-    // Espaçamento dinâmico para os novos objetos não nascerem um dentro do outro
-    float spawnX = -4.0f + (scene.size() % 5) * 2.0f;
-    float spawnZ = 2.0f + (scene.size() / 5) * 2.0f;
+            if (!scene.empty())
+            {
+                selectedIndex = selectedIndex % scene.size();
+                scene[selectedIndex].selected = true;
+                ChangeObjectColor(scene[selectedIndex], Crimson);
+            }
+            else
+            {
+                selectedIndex = -1;
+            }
+        }
+    }
+}
+
+void Multiple::HandleInsertion()
+{
+    float spacing = 1.2f;
+
+    // Espaçamento dinâmico
+    float spawnX = -2.4f + (scene.size() % 5) * spacing;
+    float spawnZ = 1.0f + (scene.size() / 5) * spacing;
 
     if (input->KeyPress('B')) CreateObject(SHAPE_BOX, spawnX, 0.5f, spawnZ);
     if (input->KeyPress('C')) CreateObject(SHAPE_CYLINDER, spawnX, 0.5f, spawnZ);
@@ -212,92 +249,59 @@ void Multiple::Update()
     if (input->KeyPress('G')) CreateObject(SHAPE_GEOSPHERE, spawnX, 0.5f, spawnZ);
     if (input->KeyPress('I')) CreateObject(SHAPE_GRID, spawnX, 0.5f, spawnZ);
     if (input->KeyPress('Q')) CreateObject(SHAPE_QUAD, spawnX, 0.5f, spawnZ);
+}
 
-    // ---------------------------------------------------------
-    // REMOÇÃO DO OBJETO SELECIONADO (Tecla DEL)
-    // ---------------------------------------------------------
-    if (input->KeyPress(VK_DELETE))
+void Multiple::HandleTransformations()
+{
+    if (selectedIndex == -1) return; // Se não houver seleção, aborta imediatamente
+
+    // LÓGICA DE ESCALA COM SCROLL + CTRL
+    if (input->KeyDown(VK_CONTROL))
     {
-        if (selectedIndex >= 0 && selectedIndex < scene.size())
+        float wheelDelta = input->MouseWheel();
+        if (wheelDelta != 0.0f)
         {
-            // Remove o objeto do vetor
-            scene.erase(scene.begin() + selectedIndex);
+            float scaleSpeed = 0.0005f;
+            scene[selectedIndex].scale += wheelDelta * scaleSpeed;
 
-            // Reajusta a seleção para o próximo elemento válido (se a cena não ficou vazia)
-            if (!scene.empty())
-            {
-                // Garante que o índice não passe do tamanho atual do vetor
-                selectedIndex = selectedIndex % scene.size();
-
-                // Pinta o novo item selecionado de vermelho
-                scene[selectedIndex].selected = true;
-                ChangeObjectColor(scene[selectedIndex], Crimson);
-            }
-            else
-            {
-                selectedIndex = -1; // Cena ficou completamente vazia
-            }
+            if (scene[selectedIndex].scale < 0.1f) scene[selectedIndex].scale = 0.1f;
+            if (scene[selectedIndex].scale > 4.0f) scene[selectedIndex].scale = 4.0f;
         }
     }
 
-    if (selectedIndex != -1)
-    {
-        // ---------------------------------------------------------
-        // LÓGICA DE ESCALA COM SCROLL
-        // ---------------------------------------------------------
-        if (input->KeyDown(VK_CONTROL))
-        {
-            float wheelDelta = input->MouseWheel();
-            if (wheelDelta != 0.0f && selectedIndex != -1)
-            {
-                float speed = 0.0005f; // Sensibilidade do zoom
-                scene[selectedIndex].scale += wheelDelta * speed;
+    // LÓGICA DA TRANSLACAO
+    float moveSpeed = 0.05f;
+    if (input->KeyDown(VK_LEFT))  scene[selectedIndex].position.x += moveSpeed;
+    if (input->KeyDown(VK_RIGHT)) scene[selectedIndex].position.x -= moveSpeed;
+    if (input->KeyDown(VK_UP))    scene[selectedIndex].position.z -= moveSpeed;
+    if (input->KeyDown(VK_DOWN))  scene[selectedIndex].position.z += moveSpeed;
+    if (input->KeyDown(VK_PRIOR)) scene[selectedIndex].position.y += moveSpeed;
+    if (input->KeyDown(VK_NEXT))  scene[selectedIndex].position.y -= moveSpeed;
 
-                // Limites (Min e Max) para não sumir nem ficar infinito
-                if (scene[selectedIndex].scale < 0.1f) scene[selectedIndex].scale = 0.1f;
-                if (scene[selectedIndex].scale > 4.0f) scene[selectedIndex].scale = 4.0f;
-            }
-        }
+    // LÓGICA DA ROTACAO
+    float rotSpeed = 0.05f;
+    if (input->KeyDown('Y')) scene[selectedIndex].rotation.x += rotSpeed;
+    if (input->KeyDown('H')) scene[selectedIndex].rotation.x -= rotSpeed;
+    if (input->KeyDown('U')) scene[selectedIndex].rotation.y += rotSpeed;
+    if (input->KeyDown('J')) scene[selectedIndex].rotation.y -= rotSpeed;
+    if (input->KeyDown('O')) scene[selectedIndex].rotation.z += rotSpeed;
+    if (input->KeyDown('L')) scene[selectedIndex].rotation.z -= rotSpeed;
+}
 
-        // ---------------------------------------------------------
-        // LÓGICA DA TRANSLACAO
-        // ---------------------------------------------------------
-		float moveSpeed = 0.05f; // Velocidade de movimento
-        if (input->KeyDown(VK_LEFT))  scene[selectedIndex].position.x += moveSpeed;
-        if (input->KeyDown(VK_RIGHT)) scene[selectedIndex].position.x -= moveSpeed;
-        if (input->KeyDown(VK_UP))    scene[selectedIndex].position.z -= moveSpeed;
-        if (input->KeyDown(VK_DOWN))  scene[selectedIndex].position.z += moveSpeed;
-		if (input->KeyDown(VK_PRIOR))      scene[selectedIndex].position.y += moveSpeed;
-		if (input->KeyDown(VK_NEXT))      scene[selectedIndex].position.y -= moveSpeed;
-    }
-
-    // ---------------------------------------------------------
-    // ATUALIZAÇÃO DA CÂMERA
-    // ---------------------------------------------------------
-    camera.Update();
-
-    XMVECTOR pos = XMVectorSet(camera.x, camera.y, camera.z, 1.0f);
-    XMVECTOR target = XMVectorZero();
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-
-    XMMATRIX proj = XMLoadFloat4x4(&Proj);
- 
-
-    // ---------------------------------------------------------
-    // ATUALIZAÇÃO DOS BUFFERS CONSTANTES
-    // ---------------------------------------------------------
+void Multiple::UpdateSceneBuffers(XMMATRIX view, XMMATRIX proj)
+{
     for (auto& obj : scene)
     {
-
         XMMATRIX S = XMMatrixScaling(obj.scale, obj.scale, obj.scale);
 
-        XMMATRIX R = XMMatrixIdentity();
+        XMMATRIX Rx = XMMatrixRotationX(obj.rotation.x);
+        XMMATRIX Ry = XMMatrixRotationY(obj.rotation.y);
+        XMMATRIX Rz = XMMatrixRotationZ(obj.rotation.z);
+        XMMATRIX R = Rz * Rx * Ry; // Ordem Roll, Pitch, Yaw
 
         XMMATRIX T = XMMatrixTranslation(obj.position.x, obj.position.y, obj.position.z);
 
         XMMATRIX W = S * R * T;
-
         XMMATRIX WorldViewProj = W * view * proj;
 
         Constants constants;

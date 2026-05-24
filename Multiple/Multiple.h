@@ -39,8 +39,10 @@ struct Object
 
     ShapeType type;
     bool selected = false;
+
     float scale = 1.0f;
     XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
 };
 
 // ------------------------------------------------------------------------------
@@ -69,6 +71,11 @@ private:
     void CreateObject(ShapeType type, float x, float y, float z);
     void ChangeObjectColor(Object& obj, XMFLOAT4 color);
 	void SelectObject(uint index);
+
+    void HandleSelectionAndDeletion();
+    void HandleInsertion();
+    void HandleTransformations();
+    void UpdateSceneBuffers(XMMATRIX view, XMMATRIX proj);
 
 public:
     void Init();
