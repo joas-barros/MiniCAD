@@ -77,6 +77,9 @@ private:
     void HandleTransformations();
     void UpdateSceneBuffers(XMMATRIX view, XMMATRIX proj);
 
+    bool showFourViews = false;
+    void HandleViewToggle();
+
 public:
     void Init();
     void Update();

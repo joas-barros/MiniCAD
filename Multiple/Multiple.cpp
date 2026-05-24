@@ -83,7 +83,7 @@ void Multiple::CreateObject(ShapeType type, float x, float y, float z)
     obj.rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
     // Todo objeto precisa do seu próprio buffer de constantes para matrizes
-    obj.cbuffer = new ConstantBuffer<Constants>();
+    obj.cbuffer = new ConstantBuffer<Constants>(4);
 
     // Aloca buffers de vértice e índice independentes baseados no modelo base
     switch (type)
@@ -134,7 +134,7 @@ void Multiple::Init()
     // --------------------------------------
 
     // posição inicial da câmera
-    camera = { XM_PIDIV2, XM_PIDIV4, 12.0f };
+    camera = { XM_PIDIV2, XM_PIDIV4, 8.0f };
 
     // inicializa a matriz de projeção
     XMStoreFloat4x4(&Proj, XMMatrixPerspectiveFovLH(
@@ -170,6 +170,14 @@ void Multiple::Init()
 
 // ------------------------------------------------------------------------------
 
+void Multiple::HandleViewToggle()
+{
+    if (input->KeyPress('V'))
+    {
+        showFourViews = !showFourViews;
+    }
+}
+
 void Multiple::Update()
 {
     // sai com o pressionamento da tecla ESC
@@ -180,6 +188,7 @@ void Multiple::Update()
     HandleSelectionAndDeletion();
     HandleInsertion();
     HandleTransformations();
+    HandleViewToggle();
 
     // Atualização da Câmera
     camera.Update();
@@ -290,6 +299,41 @@ void Multiple::HandleTransformations()
 
 void Multiple::UpdateSceneBuffers(XMMATRIX view, XMMATRIX proj)
 {
+    float width = (float)window->Width();
+    float height = (float)window->Height();
+    float aspect = width / height;
+
+    XMMATRIX views[4];
+    XMMATRIX projs[4];
+
+    if (showFourViews)
+    {
+        float orthoHeight = 10.0f;
+        float orthoWidth = orthoHeight * aspect;
+        XMMATRIX orthoProj = XMMatrixOrthographicLH(orthoWidth, orthoHeight, 1.0f, 100.0f);
+
+        // Slot 0: Vista Frontal (Olhando de Z- para a origem)
+        views[0] = XMMatrixLookAtLH(XMVectorSet(0.0f, 0.0f, -orthoHeight, 1.0f), XMVectorZero(), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+        projs[0] = orthoProj;
+
+        // Slot 1: Vista Superior (Olhando de Y+ para a origem)
+		views[1] = XMMatrixLookAtLH(XMVectorSet(0.0f, orthoHeight, 0.0f, 1.0f), XMVectorZero(), XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f));
+        projs[1] = orthoProj;
+
+        // Slot 2: Vista Lateral (Olhando de X+ para a origem)
+        views[2] = XMMatrixLookAtLH(XMVectorSet(orthoHeight, 0.0f, 0.0f, 1.0f), XMVectorZero(), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+        projs[2] = orthoProj;
+
+        // Slot 3: Vista em Perspectiva (Câmera Orbitando)
+        views[3] = view;
+        projs[3] = proj;
+    }
+    else
+    {
+        views[0] = view;
+        projs[0] = proj;
+    }
+
     for (auto& obj : scene)
     {
         XMMATRIX S = XMMatrixScaling(obj.scale, obj.scale, obj.scale);
@@ -302,11 +346,16 @@ void Multiple::UpdateSceneBuffers(XMMATRIX view, XMMATRIX proj)
         XMMATRIX T = XMMatrixTranslation(obj.position.x, obj.position.y, obj.position.z);
 
         XMMATRIX W = S * R * T;
-        XMMATRIX WorldViewProj = W * view * proj;
 
-        Constants constants;
-        XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
-        obj.cbuffer->Copy(&constants);
+        uint viewsToUpdate = showFourViews ? 4 : 1;
+
+        for (uint v = 0; v < viewsToUpdate; ++v)
+        {
+			XMMATRIX WorldViewProj = W * views[v] * projs[v];
+			Constants constants;
+			XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
+			obj.cbuffer->Copy(&constants, v);
+        }
     }
 }
 
@@ -314,32 +363,57 @@ void Multiple::UpdateSceneBuffers(XMMATRIX view, XMMATRIX proj)
 
 void Multiple::Draw()
 {
-    // limpa o backbuffer
     graphics->Clear();
 
-    // comandos de configuração comuns a todos os objetos
     graphics->CommandList()->SetPipelineState(pipelineState);
     graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
     graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    
-    // desenha objetos da cena
-    for (auto& obj : scene)
-    {
-        // comandos de configuração específicos a cada objeto
-        graphics->CommandList()->SetGraphicsRootConstantBufferView(0, obj.cbuffer->View());
-        graphics->CommandList()->IASetVertexBuffers(0, 1, obj.vbuffer->View());
-        graphics->CommandList()->IASetIndexBuffer(obj.ibuffer->View());
 
-        // desenha objeto
-        graphics->CommandList()->DrawIndexedInstanced(
-            obj.mesh->indexCount, 1,
-            obj.mesh->startIndex,
-            obj.mesh->baseVertex,
-            0);
+    float w = (float)window->Width();
+    float h = (float)window->Height();
+
+    if (showFourViews)
+    {
+        float halfW = w / 2.0f;
+        float halfH = h / 2.0f;
+
+		D3D12_VIEWPORT viewFront = { 0.0f, 0.0f, halfW, halfH, 0.0f, 1.0f };
+		D3D12_VIEWPORT viewTop = { halfW, 0.0f, halfW, halfH, 0.0f, 1.0f };
+		D3D12_VIEWPORT viewRight = { 0.0f,  halfH, halfW, halfH, 0.0f, 1.0f };
+		D3D12_VIEWPORT viewPersp = { halfW, halfH, halfW, halfH, 0.0f, 1.0f };
+
+        D3D12_VIEWPORT viewports[4] = { viewFront, viewTop, viewRight, viewPersp };
+
+        for (uint v = 0; v < 4; ++v)
+        {
+            graphics->CommandList()->RSSetViewports(1, &viewports[v]);
+
+            for (auto& obj : scene)
+            {
+                // Vincula o slot do buffer constante correspondente a esta vista (0, 1, 2 ou 3)
+                graphics->CommandList()->SetGraphicsRootConstantBufferView(0, obj.cbuffer->View(v));
+                graphics->CommandList()->IASetVertexBuffers(0, 1, obj.vbuffer->View());
+                graphics->CommandList()->IASetIndexBuffer(obj.ibuffer->View());
+                graphics->CommandList()->DrawIndexedInstanced(obj.mesh->indexCount, 1, obj.mesh->startIndex, obj.mesh->baseVertex, 0);
+            }
+        }
     }
- 
-    // apresenta o backbuffer na tela
-    graphics->Present();    
+    else
+    {
+        D3D12_VIEWPORT viewFull = { 0.0f, 0.0f, w, h, 0.0f, 1.0f };
+        graphics->CommandList()->RSSetViewports(1, &viewFull);
+
+        for (auto& obj : scene)
+        {
+            // Usa apenas o slot 0 gerado no Update para tela cheia
+            graphics->CommandList()->SetGraphicsRootConstantBufferView(0, obj.cbuffer->View(0));
+            graphics->CommandList()->IASetVertexBuffers(0, 1, obj.vbuffer->View());
+            graphics->CommandList()->IASetIndexBuffer(obj.ibuffer->View());
+            graphics->CommandList()->DrawIndexedInstanced(obj.mesh->indexCount, 1, obj.mesh->startIndex, obj.mesh->baseVertex, 0);
+        }
+    }
+
+    graphics->Present();
 }
 
 // ------------------------------------------------------------------------------
