@@ -39,6 +39,7 @@ struct Object
 
     ShapeType type;
     bool selected = false;
+    float scale = 1.0f;
 };
 
 // ------------------------------------------------------------------------------

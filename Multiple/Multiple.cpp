@@ -198,18 +198,6 @@ void Multiple::Update()
     }
 
     // ---------------------------------------------------------
-    // ATUALIZAÇÃO DA CÂMERA
-    // ---------------------------------------------------------
-    camera.Update();
-
-    XMVECTOR pos = XMVectorSet(camera.x, camera.y, camera.z, 1.0f);
-    XMVECTOR target = XMVectorZero();
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-
-    XMMATRIX proj = XMLoadFloat4x4(&Proj);
-
-    // ---------------------------------------------------------
     // INSERÇÃO DE OBJETOS
     // ---------------------------------------------------------
 
@@ -252,16 +240,58 @@ void Multiple::Update()
     }
 
     // ---------------------------------------------------------
+    // LÓGICA DE ESCALA COM SCROLL
+    // ---------------------------------------------------------
+    if (selectedIndex != -1 && input->KeyDown(VK_CONTROL))
+    {
+        float wheelDelta = input->MouseWheel();
+        if (wheelDelta != 0.0f && selectedIndex != -1)
+        {
+            float speed = 0.0005f; // Sensibilidade do zoom
+            scene[selectedIndex].scale += wheelDelta * speed;
+
+            // Limites (Min e Max) para não sumir nem ficar infinito
+            if (scene[selectedIndex].scale < 0.1f) scene[selectedIndex].scale = 0.1f;
+            if (scene[selectedIndex].scale > 4.0f) scene[selectedIndex].scale = 4.0f;
+        }
+    }
+
+    // ---------------------------------------------------------
+    // ATUALIZAÇÃO DA CÂMERA
+    // ---------------------------------------------------------
+    camera.Update();
+
+    XMVECTOR pos = XMVectorSet(camera.x, camera.y, camera.z, 1.0f);
+    XMVECTOR target = XMVectorZero();
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
+
+    XMMATRIX proj = XMLoadFloat4x4(&Proj);
+ 
+
+    // ---------------------------------------------------------
     // ATUALIZAÇÃO DOS BUFFERS CONSTANTES
     // ---------------------------------------------------------
-    for (size_t i = 0; i < scene.size(); i++)
+    for (auto& obj : scene)
     {
-        XMMATRIX world = XMLoadFloat4x4(&scene[i].world);
-        XMMATRIX WorldViewProj = world * view * proj;
+        XMMATRIX worldBase = XMLoadFloat4x4(&obj.world);
+
+        XMVECTOR scaleVec, rotQuat, transVec;
+        XMMatrixDecompose(&scaleVec, &rotQuat, &transVec, worldBase);
+
+        XMMATRIX S = XMMatrixScaling(obj.scale, obj.scale, obj.scale);
+
+        XMMATRIX R = XMMatrixIdentity();
+
+        XMMATRIX T = XMMatrixTranslationFromVector(transVec);
+
+        XMMATRIX W = S * R * T;
+
+        XMMATRIX WorldViewProj = W * view * proj;
 
         Constants constants;
         XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
-        scene[i].cbuffer->Copy(&constants);
+        obj.cbuffer->Copy(&constants);
     }
 }
 
