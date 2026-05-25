@@ -11,6 +11,11 @@
 
 #include "Geometry.h"
 
+#include <fstream>
+#include <sstream>
+#include <iostream>
+using namespace std;
+
 //   __________   _____   __________   ________   ___________   ______   ______
 // _/ Geometry \_/ Box \_/ Cylinder \_/ Sphere \_/ GeoSphere \_/ Grid \_/ Quad \_
 // ------------------------------------------------------------------------------
@@ -459,6 +464,72 @@ Quad::Quad(float width, float height, XMFLOAT4 color)
     // insere índices na malha
     for (uint i : quadIndices)
         indices.push_back(i);
+}
+
+//                                                                       __________
+// _____________________________________________________________________/ ModelOBJ \_
+// ----------------------------------------------------------------------------------
+
+ModelOBJ::ModelOBJ(const string& filename, XMFLOAT4 color)
+{
+    ifstream file(filename);
+
+    if (!file.is_open())
+    {
+        cerr << "Erro: Nao foi possivel abrir o arquivo " << filename << endl;
+        return;
+    }
+
+    string line;
+    vector<XMFLOAT3> temp_positions;
+
+    while (getline(file, line))
+    {
+        // Pula linhas vazias
+        if (line.empty()) continue;
+
+        // VÉRTICES
+        if (line.substr(0, 2) == "v ")
+        {
+            stringstream ss(line.substr(2));
+            float x, y, z;
+            ss >> x >> y >> z;
+
+            temp_positions.push_back(XMFLOAT3(x, y, z));
+		}
+        // FACES
+        else if (line.substr(0, 2) == "f ")
+        {
+            stringstream ss(line.substr(2));
+            string vertexStr;
+            vector<uint> faceIndices;
+            while (ss >> vertexStr)
+            {
+                size_t pos = vertexStr.find('/');
+                string vertex_idx_str = vertexStr.substr(0, pos);
+
+                // Converte para inteiro e ajusta o índice (OBJ começa em 1, C++ começa em 0)
+				int vertexIndex = stoi(vertex_idx_str) - 1;
+                faceIndices.push_back(vertexIndex);
+            }
+
+            for (size_t i = 1; i < faceIndices.size() - 1; ++i)
+            {
+                indices.push_back(faceIndices[i]);
+                indices.push_back(faceIndices[i + 1]);
+                indices.push_back(faceIndices[0]);
+            }
+        }
+    }
+
+    // Preenche o vetor final de vértices da Geometry base aplicando a cor
+    for (const auto& pos : temp_positions)
+    {
+        Vertex v;
+        v.pos = pos;
+        v.color = color;
+        vertices.push_back(v);
+    }
 }
 
 // -------------------------------------------------------------------------------

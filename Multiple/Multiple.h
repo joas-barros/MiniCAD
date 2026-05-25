@@ -13,7 +13,7 @@
 
 // ------------------------------------------------------------------------------
 
-enum ShapeType { SHAPE_BOX, SHAPE_SPHERE, SHAPE_CYLINDER, SHAPE_GEOSPHERE, SHAPE_GRID, SHAPE_QUAD};
+enum ShapeType { SHAPE_BOX, SHAPE_SPHERE, SHAPE_CYLINDER, SHAPE_GEOSPHERE, SHAPE_GRID, SHAPE_QUAD, SHAPE_OBJ };
 
 struct Constants
 {
@@ -43,6 +43,8 @@ struct Object
     float scale = 1.0f;
     XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
+
+    Geometry* baseGeo = nullptr;
 };
 
 // ------------------------------------------------------------------------------
@@ -63,13 +65,15 @@ private:
     Box* baseBox = nullptr;
     Cylinder* baseCylinder = nullptr;
     Sphere* baseSphere = nullptr;
-    GeoSphere* baseGeoSphere = nullptr;
+    GeoSphere* baseGeoSphere = nullptr  ;
     Grid* baseGrid = nullptr;
     Quad* baseQuad = nullptr;
 
+    ModelOBJ* baseModels[5] = { nullptr };
+
 	// Metodos de criação e manipulação de objetos
     uint selectedIndex = -1;
-    void CreateObject(ShapeType type, float x, float y, float z);
+    void CreateObject(ShapeType type, float x, float y, float z, Geometry* customBase = nullptr);
     void ChangeObjectColor(Object& obj, XMFLOAT4 color);
 	void SelectObject(uint index);
 

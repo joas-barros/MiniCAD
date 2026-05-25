@@ -67,11 +67,22 @@ void Multiple::ChangeObjectColor(Object& obj, XMFLOAT4 color)
         Quad shape(QUAD_SIZE, QUAD_SIZE, color);
         obj.vbuffer = new VertexBuffer<Vertex>(shape);
     }
+    else if (obj.type == SHAPE_OBJ && obj.baseGeo != nullptr)
+    {
+        Geometry tempGeo = *obj.baseGeo;
+
+        for (size_t i = 0; i < tempGeo.vertices.size(); i++)
+        {
+            tempGeo.vertices[i].color = color;
+        }
+
+        obj.vbuffer = new VertexBuffer<Vertex>(tempGeo);
+    }
 }
 
 // ------------------------------------------------------------------------------
 
-void Multiple::CreateObject(ShapeType type, float x, float y, float z)
+void Multiple::CreateObject(ShapeType type, float x, float y, float z, Geometry* customBase)
 {
     Object obj;
     obj.type = type;
@@ -81,6 +92,9 @@ void Multiple::CreateObject(ShapeType type, float x, float y, float z)
     XMStoreFloat4x4(&obj.world, XMMatrixTranslation(x, y, z));
 	obj.position = { x, y, z };
     obj.rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+    // Salva a referência da geometria original
+    obj.baseGeo = customBase;
 
     // Todo objeto precisa do seu próprio buffer de constantes para matrizes
     obj.cbuffer = new ConstantBuffer<Constants>(4);
@@ -118,6 +132,11 @@ void Multiple::CreateObject(ShapeType type, float x, float y, float z)
         obj.vbuffer = new VertexBuffer<Vertex>(*baseQuad);
         obj.ibuffer = new IndexBuffer<uint>(*baseQuad);
         break;
+    case SHAPE_OBJ:
+        obj.mesh = new Mesh(*customBase);
+        obj.vbuffer = new VertexBuffer<Vertex>(*customBase);
+        obj.ibuffer = new IndexBuffer<uint>(*customBase);
+        break;
     }
 
     scene.push_back(obj);
@@ -152,6 +171,12 @@ void Multiple::Init()
     baseGeoSphere = new GeoSphere(GEOSPHERE_RADIUS, GEOSPHERE_SUBDIVISIONS, White);
     baseGrid = new Grid(PLANE_WIDTH, PLANE_DEPTH, GRID_M, GRID_N, White);
     baseQuad = new Quad(QUAD_SIZE, QUAD_SIZE, White);
+
+    baseModels[0] = new ModelOBJ("Resources/ball.obj", White);
+    baseModels[1] = new ModelOBJ("Resources/monkey.obj", White);
+    baseModels[2] = new ModelOBJ("Resources/house.obj", White);
+    baseModels[3] = new ModelOBJ("Resources/capsule.obj", White);
+    baseModels[4] = new ModelOBJ("Resources/thorus.obj", White);
 
     // Cena inicial com 3 objetos
     CreateObject(SHAPE_BOX, -1.5f, 0.5f, 0.0f);
@@ -277,6 +302,12 @@ void Multiple::HandleInsertion()
     if (input->KeyPress('G')) CreateObject(SHAPE_GEOSPHERE, spawnX, 0.5f, spawnZ);
     if (input->KeyPress('I')) CreateObject(SHAPE_GRID, spawnX, 0.5f, spawnZ);
     if (input->KeyPress('Q')) CreateObject(SHAPE_QUAD, spawnX, 0.5f, spawnZ);
+
+    if (input->KeyPress('1')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[0]);
+    if (input->KeyPress('2')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[1]);
+    if (input->KeyPress('3')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[2]);
+    if (input->KeyPress('4')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[3]);
+    if (input->KeyPress('5')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[4]);
 }
 
 void Multiple::HandleTransformations()
@@ -472,6 +503,15 @@ void Multiple::Finalize()
     delete baseGeoSphere;
     delete baseGrid;
     delete baseQuad;
+
+    for (int i = 0; i < 5; i++)
+    {
+        if (baseModels[i] != nullptr)
+        {
+            delete baseModels[i];
+            baseModels[i] = nullptr;
+        }
+    }
 
     delete linesVBuffer;
     delete linesCBuffer;

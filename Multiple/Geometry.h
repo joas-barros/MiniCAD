@@ -16,11 +16,13 @@
 
 #include "Types.h"
 #include <vector>
+#include <string>
 #include <DirectXMath.h>
 #include <DirectXColors.h>
 #include "Colors.h"
 using namespace DirectX;
 using std::vector;
+using std::string;
 
 // -------------------------------------------------------------------------------
 
@@ -129,6 +131,15 @@ struct Quad : public Geometry
     Quad(float width,                       // largura
         float height,                       // altura
         XMFLOAT4 color = Green);            // cor
+};
+
+// -------------------------------------------------------------------------------
+// ModelOBJ
+// -------------------------------------------------------------------------------
+
+struct ModelOBJ : public Geometry
+{
+    ModelOBJ(const string& filename, XMFLOAT4 color);
 };
 
 // -------------------------------------------------------------------------------
