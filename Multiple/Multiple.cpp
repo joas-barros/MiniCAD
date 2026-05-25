@@ -177,6 +177,7 @@ void Multiple::Init()
     baseModels[2] = new ModelOBJ("Resources/house.obj", White);
     baseModels[3] = new ModelOBJ("Resources/capsule.obj", White);
     baseModels[4] = new ModelOBJ("Resources/thorus.obj", White);
+	baseModels[5] = new ModelOBJ("Resources/pegazuls.obj", White, 0.01f);
 
     // Cena inicial com 3 objetos
     CreateObject(SHAPE_BOX, -1.5f, 0.5f, 0.0f);
@@ -308,6 +309,7 @@ void Multiple::HandleInsertion()
     if (input->KeyPress('3')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[2]);
     if (input->KeyPress('4')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[3]);
     if (input->KeyPress('5')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[4]);
+    if (input->KeyPress('6')) CreateObject(SHAPE_OBJ, spawnX, 0.5f, spawnZ, baseModels[5]);
 }
 
 void Multiple::HandleTransformations()
@@ -504,7 +506,7 @@ void Multiple::Finalize()
     delete baseGrid;
     delete baseQuad;
 
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 6; i++)
     {
         if (baseModels[i] != nullptr)
         {

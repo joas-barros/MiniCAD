@@ -139,7 +139,7 @@ struct Quad : public Geometry
 
 struct ModelOBJ : public Geometry
 {
-    ModelOBJ(const string& filename, XMFLOAT4 color);
+    ModelOBJ(const string& filename, XMFLOAT4 color, float scaleFactor = 1.0f);
 };
 
 // -------------------------------------------------------------------------------

@@ -65,11 +65,11 @@ private:
     Box* baseBox = nullptr;
     Cylinder* baseCylinder = nullptr;
     Sphere* baseSphere = nullptr;
-    GeoSphere* baseGeoSphere = nullptr  ;
+    GeoSphere* baseGeoSphere = nullptr;
     Grid* baseGrid = nullptr;
     Quad* baseQuad = nullptr;
 
-    ModelOBJ* baseModels[5] = { nullptr };
+    ModelOBJ* baseModels[6] = { nullptr };
 
 	// Metodos de criação e manipulação de objetos
     uint selectedIndex = -1;

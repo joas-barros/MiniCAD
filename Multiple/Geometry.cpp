@@ -470,7 +470,7 @@ Quad::Quad(float width, float height, XMFLOAT4 color)
 // _____________________________________________________________________/ ModelOBJ \_
 // ----------------------------------------------------------------------------------
 
-ModelOBJ::ModelOBJ(const string& filename, XMFLOAT4 color)
+ModelOBJ::ModelOBJ(const string& filename, XMFLOAT4 color, float scaleFactor)
 {
     ifstream file(filename);
 
@@ -495,7 +495,7 @@ ModelOBJ::ModelOBJ(const string& filename, XMFLOAT4 color)
             float x, y, z;
             ss >> x >> y >> z;
 
-            temp_positions.push_back(XMFLOAT3(x, y, z));
+            temp_positions.push_back(XMFLOAT3(x * scaleFactor, y * scaleFactor, z * scaleFactor));
 		}
         // FACES
         else if (line.substr(0, 2) == "f ")
