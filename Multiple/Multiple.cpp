@@ -39,6 +39,9 @@ void Multiple::SelectObject(uint index)
 
 void Multiple::ChangeObjectColor(Object& obj, XMFLOAT4 color)
 {
+
+    graphics->WaitForGpu();
+
     // Deleta o buffer de vértices antigo
     if (obj.vbuffer) delete obj.vbuffer;
 
