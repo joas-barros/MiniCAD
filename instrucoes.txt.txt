@@ -1,0 +1,52 @@
+OBS: O programa conta com o carregamento de um arquivo obj de um aerodesign exportado do solidworks que contem mais de 30 mil vértices, por conta disso, ele demora um pouco para ser carregado no início.
+
+INSTRUÇÕES DE INSERÇÃO:
+
+B - Box
+C - Cylinder
+S - Sphere
+G - GeoSphere
+I - Plane
+Q - Quad
+
+1 - Bola
+2 - Monkey
+3 - House
+4 - Capsule
+5 - Thorus
+6 - Toró (avião da equipe PegAzuls)
+
+Instruções de seleção
+
+TAB
+
+
+Instrução de remoção
+
+DEL
+
+
+Instruções de translação
+
+Esquerda - Seta esquerda
+Direita - Seta direita
+Frente - Seta para baixo
+Tras - Seta para frente
+Cima - Page Up
+Baixo - Page Down
+
+
+Instrução de escala
+
+crtl + scroll do mouse
+
+
+Instrução para entre no modo ViewPort
+
+Tecla V
+
+Instruções de rotação
+
+Eixo X - Teclas Y e H
+Eixo Y - Teclas U e J
+Eixo Z - Teclas O e L

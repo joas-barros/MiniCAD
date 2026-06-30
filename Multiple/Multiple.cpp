@@ -180,7 +180,7 @@ void Multiple::Init()
     baseModels[2] = new ModelOBJ("Resources/house.obj", White);
     baseModels[3] = new ModelOBJ("Resources/capsule.obj", White);
     baseModels[4] = new ModelOBJ("Resources/thorus.obj", White);
-	baseModels[5] = new ModelOBJ("Resources/pegazuls.obj", White, 0.01f);
+	baseModels[5] = new ModelOBJ("Resources/pegazuls.obj", White, 0.003f);
 
     // Cena inicial com 3 objetos
     CreateObject(SHAPE_BOX, -1.5f, 0.5f, 0.0f);
